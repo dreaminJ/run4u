@@ -34,7 +34,7 @@ export const LoginScreen = () => {
     try {
       await signIn('google');
     } catch {
-      Alert.alert('Google 로그인 실패', '설정이나 네트워크를 확인해 주세요.');
+      Alert.alert('Google 로그인 실패', '설정이나 네트워크 상태를 확인해 주세요.');
     }
   };
 
@@ -42,7 +42,7 @@ export const LoginScreen = () => {
     try {
       await signIn('kakao');
     } catch {
-      Alert.alert('카카오 로그인 실패', '설정이나 네트워크를 확인해 주세요.');
+      Alert.alert('카카오 로그인 실패', '설정이나 네트워크 상태를 확인해 주세요.');
     }
   };
 

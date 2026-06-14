@@ -26,7 +26,7 @@ export const useSocialAuth = () => {
           setUser(nextUser);
           return nextUser;
         } catch (e) {
-          const message = e instanceof Error ? e.message : '로그인 중 오류가 발생했어요.';
+          const message = e instanceof Error ? e.message : '로그인 중 오류가 발생했습니다.';
           setError(message);
           throw e;
         } finally {

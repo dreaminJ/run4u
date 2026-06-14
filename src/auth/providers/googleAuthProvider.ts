@@ -8,48 +8,70 @@ const discovery = {
   tokenEndpoint: 'https://oauth2.googleapis.com/token'
 };
 
+const GOOGLE_SCOPES = ['openid', 'profile', 'email'];
+
 const ensureGoogleConfig = () => {
   const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
   const androidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
   const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  const redirectUri =
+    process.env.EXPO_PUBLIC_GOOGLE_REDIRECT_URI ??
+    AuthSession.makeRedirectUri({ scheme: 'run4u', path: 'oauth/google' });
 
-  if (!iosClientId || !androidClientId || !webClientId) {
-    throw new Error('Google OAuth 환경변수(EXPO_PUBLIC_GOOGLE_*_CLIENT_ID)가 필요합니다.');
+  const clientId =
+    Constants.platform?.ios != null
+      ? iosClientId
+      : Constants.platform?.android != null
+        ? androidClientId
+        : webClientId;
+
+  if (!clientId) {
+    throw new Error('현재 플랫폼에 맞는 Google OAuth client id 환경변수가 필요합니다.');
   }
 
-  return { iosClientId, androidClientId, webClientId };
+  return { clientId, redirectUri };
 };
 
 export class GoogleAuthProvider implements SocialAuthProvider {
   provider = 'google' as const;
 
   async signIn(): Promise<AuthUser> {
-    const { iosClientId, androidClientId, webClientId } = ensureGoogleConfig();
-    const redirectUri = AuthSession.makeRedirectUri({ scheme: 'run4u' });
+    const { clientId, redirectUri } = ensureGoogleConfig();
 
     const request = new AuthSession.AuthRequest({
-      clientId:
-        Constants.platform?.ios != null
-          ? iosClientId
-          : Constants.platform?.android != null
-            ? androidClientId
-            : webClientId,
+      clientId,
       redirectUri,
-      responseType: AuthSession.ResponseType.Token,
-      scopes: ['openid', 'profile', 'email']
+      responseType: AuthSession.ResponseType.Code,
+      scopes: GOOGLE_SCOPES,
+      usePKCE: true
     });
 
     const result = await request.promptAsync(discovery);
 
-    if (result.type !== 'success' || !result.params.access_token) {
-      throw new Error('Google 로그인에 실패했어요.');
+    if (result.type !== 'success' || !result.params.code) {
+      throw new Error('Google 인증 코드를 받지 못했습니다.');
+    }
+
+    const tokenResponse = await AuthSession.exchangeCodeAsync(
+      {
+        clientId,
+        code: result.params.code,
+        extraParams: request.codeVerifier ? { code_verifier: request.codeVerifier } : undefined,
+        redirectUri
+      },
+      discovery
+    );
+
+    if (!tokenResponse.accessToken) {
+      throw new Error('Google 토큰 발급에 실패했습니다.');
     }
 
     return {
       provider: this.provider,
-      accessToken: result.params.access_token,
-      idToken: result.params.id_token,
-      expiresIn: result.params.expires_in ? Number(result.params.expires_in) : undefined
+      accessToken: tokenResponse.accessToken,
+      idToken: tokenResponse.idToken,
+      refreshToken: tokenResponse.refreshToken,
+      expiresIn: tokenResponse.expiresIn
     };
   }
 }
