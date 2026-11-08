@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "run4u-mobile",
+    "slug": "run4u-mobile",
+    "scheme": "run4u",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": ["ios", "android"]
+  }
+}
